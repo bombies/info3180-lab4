@@ -1,4 +1,7 @@
 import os
+
+from werkzeug.security import check_password_hash
+from wtforms.fields.simple import PasswordField
 from app import app, db, login_manager
 from flask import render_template, request, redirect, url_for, flash, session, abort
 from flask_login import login_user, logout_user, current_user, login_required
@@ -43,20 +46,21 @@ def login():
 
     # change this to actually validate the entire form submission
     # and not just one field
-    if form.username.data:
+    if form.validate_on_submit():
         # Get the username and password values from the form.
+        username, password = request.form['username'], request.form['password']
+        user = UserProfile.query.filter_by(username=username).first()
 
-        # Using your model, query database for a user based on the username
-        # and password submitted. Remember you need to compare the password hash.
-        # You will need to import the appropriate function to do so.
-        # Then store the result of that query to a `user` variable so it can be
-        # passed to the login_user() method below.
+        if not user:
+            flash('Invalid username or password.', 'danger')
+            return render_template("login.html", form=form)
 
-        # Gets user id, load into session
-        login_user(user)
-
-        # Remember to flash a message to the user
-        return redirect(url_for("home"))  # The user should be redirected to the upload form instead
+        if check_password_hash(user['password'], password):
+            login_user(user)
+            flash('Logged in successfully.', 'success')
+            return redirect(url_for("home"))  # The user should be redirected to the upload form instead
+        else:
+            flash('Invalid username or password.', 'danger')
     return render_template("login.html", form=form)
 
 # user_loader callback. This callback is used to reload the user object from
