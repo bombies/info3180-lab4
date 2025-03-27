@@ -3,7 +3,7 @@ import os
 from werkzeug.security import check_password_hash
 from wtforms.fields.simple import PasswordField
 from app import app, db, login_manager
-from flask import render_template, request, redirect, url_for, flash, session, abort
+from flask import render_template, request, redirect, url_for, flash, session, abort, send_from_directory
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 from app.models import UserProfile
@@ -44,6 +44,18 @@ def upload():
 
     return render_template('upload.html', form=form)
 
+@app.route('/uploads/<path:filename>')
+def get_image(filename):
+	return send_from_directory(os.path.join(os.getcwd(), app.config['UPLOAD_FOLDER']), filename)
+
+@app.route('/files', methods=["GET"])
+@login_required
+def files():
+    # Get all files from the uploads folder
+    files = get_uploaded_images()
+
+    # Render the template with the list of files
+    return render_template('files.html', files=files)
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
@@ -73,6 +85,9 @@ def login():
 @login_manager.user_loader
 def load_user(id):
     return db.session.execute(db.select(UserProfile).filter_by(id=id)).scalar()
+
+def get_uploaded_images():
+	return os.listdir(os.getcwd() + app.config['UPLOAD_FOLDER'])
 
 ###
 # The functions below should be applicable to all Flask apps.
